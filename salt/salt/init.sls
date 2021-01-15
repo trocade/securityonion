@@ -11,3 +11,16 @@ salt_bootstrap:
     - name: /usr/sbin/bootstrap-salt.sh
     - source: salt://salt/scripts/bootstrap-salt.sh
     - mode: 755
+
+etc_salt_dirs:
+  file.managed:
+    - name: /etc/salt/
+    - owner: root
+    - group: root
+    - dir_mode: 770
+    - file_mode: 660
+    - recurse:
+      - user
+      - group
+      - mode
+    - onlyif: __salt__['pkg.version']('salt-minion')
