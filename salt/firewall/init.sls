@@ -105,17 +105,11 @@ enable_docker_user_established:
                 {% set count.value = count.value + 1 %}
 
 {{action}}_{{chain}}_{{hostgroup}}_{{ip}}_{{port}}_{{proto}}_{{count.value}}:
-  iptables.{{action}}:
-    - table: filter
-    - chain: {{ chain }}
-    - jump: ACCEPT
-    - proto: {{ proto }}
-    - source: {{ ip }}
-    - dport: {{ port }}
-              {% if action == 'insert' %}
-    - position: 1
-              {% endif %}
-    - save: True
+  file.accumulated:
+    - filename: /etc/sysconfig/iptables
+    - text: '-A {{chain}} -s {{ip}} -p {{proto}} -m {{proto}} --dport {{port}} -j ACCEPT'
+    - require_in:
+      file: iptables_file
 
               {% endfor %}
             {% endfor %}
@@ -125,6 +119,14 @@ enable_docker_user_established:
     {% endfor %}
   {% endfor %}
 {% endfor %}
+
+iptables_file:
+  file.blockreplace:
+    - name: /etc/sysconfig/iptables
+    - marker_start: "# START SALT BLOCKREPLACE ZONE"
+    - marker_end: "# END SALT BLOCKREPLACE ZONE"
+    - append_if_not_found: True
+
 
 # Make the input policy send stuff that doesn't match to be logged and dropped
 iptables_drop_all_the_things:
