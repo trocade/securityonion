@@ -109,7 +109,7 @@ enable_docker_user_established:
     - filename: /etc/sysconfig/iptables
     - text: "-A {{chain}} -s {{ip}} -p {{proto}} -m {{proto}} --dport {{port}} -j ACCEPT"
     - require_in:
-      file: iptables_file
+      - file: iptables_file
 
               {% endfor %}
             {% endfor %}
