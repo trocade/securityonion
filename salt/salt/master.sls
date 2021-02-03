@@ -5,6 +5,7 @@
 
 include:
   - salt.minion
+  - systemd.reload
 
 salt_master_package:
   pkg.installed:
@@ -17,6 +18,14 @@ salt_master_service:
   service.running:
     - name: salt-master
     - enable: True
+    - watch:
+      - module: reload_systemd
+      - file: salt_minion_systemd
+
+salt_master_systemd:
+  file.managed:
+    - name: /etc/systemd/system/multi-user.target.wants/salt-master.service
+    - source: salt://salt/sytemd/salt-master.service
 
 checkmine_engine:
   file.managed:
@@ -32,6 +41,8 @@ engines_config:
     - source: salt://salt/files/engines.conf
     - watch_in:
         - service: salt_minion_service
+
+
 
 {% else %}
 

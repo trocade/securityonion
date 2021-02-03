@@ -5,6 +5,7 @@
 
 include:
   - salt
+  - systemd.reload
 
 install_salt_minion:
   cmd.run:
@@ -27,4 +28,13 @@ salt_minion_service:
   service.running:
     - name: salt-minion
     - enable: True
+    - onlyif: test "{{INSTALLEDSALTVERSION}}" == "{{SALTVERSION}}"
+    - watch:
+      - module: reload_systemd
+      - file: salt_minion_systemd
+
+salt_minion_systemd:
+  file.managed:
+    - name: /etc/systemd/system/multi-user.target.wants/salt-minion.service
+    - source: salt://salt/sytemd/salt-minion.service
     - onlyif: test "{{INSTALLEDSALTVERSION}}" == "{{SALTVERSION}}"
