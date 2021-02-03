@@ -120,6 +120,13 @@ enable_docker_user_established:
   {% endfor %}
 {% endfor %}
 
+add_commit_accumulator:
+  file.accumulated:
+    - filename: /etc/sysconfig/iptables
+    - text: "COMMIT"
+    - require_in:
+      - file: iptables_file
+
 iptables_file:
   file.blockreplace:
     - name: /etc/sysconfig/iptables
