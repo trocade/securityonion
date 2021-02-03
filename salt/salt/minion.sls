@@ -36,5 +36,5 @@ salt_minion_service:
 salt_minion_systemd:
   file.managed:
     - name: /etc/systemd/system/multi-user.target.wants/salt-minion.service
-    - source: salt://salt/sytemd/salt-minion.service
+    - source: salt://salt/systemd/salt-minion.service
     - onlyif: test "{{INSTALLEDSALTVERSION}}" == "{{SALTVERSION}}"

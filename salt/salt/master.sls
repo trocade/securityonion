@@ -25,7 +25,7 @@ salt_master_service:
 salt_master_systemd:
   file.managed:
     - name: /etc/systemd/system/multi-user.target.wants/salt-master.service
-    - source: salt://salt/sytemd/salt-master.service
+    - source: salt://salt/systemd/salt-master.service
 
 checkmine_engine:
   file.managed:
