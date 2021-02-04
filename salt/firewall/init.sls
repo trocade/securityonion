@@ -134,7 +134,6 @@ iptables_file:
     - marker_end: "# END SALT BLOCKREPLACE ZONE"
     - append_if_not_found: True
 
-
 # Make the input policy send stuff that doesn't match to be logged and dropped
 iptables_drop_all_the_things:
   iptables.append:
@@ -142,6 +141,20 @@ iptables_drop_all_the_things:
     - chain: LOGGING
     - jump: DROP
     - save: True
+
+flush_iptables:
+    iptables.flush:
+        - table: filter
+        - family: ipv4
+        - onchanges:
+            - file: iptables_file
+
+restore_iptables:
+    cmd.run:
+        - name: "iptables-restore < /etc/sysconfig/iptables"
+        - onchanges:
+            - file: iptables_file
+
 
 {% else %}
 
