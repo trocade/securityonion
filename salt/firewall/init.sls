@@ -93,6 +93,11 @@ enable_docker_user_established:
     - match: conntrack
     - ctstate: 'RELATED,ESTABLISHED'
 
+insert_blockreplace_start_and_end:
+  cmd.run:
+    - name: "LN=$(egrep -n 'filter|COMMIT' /etc/sysconfig/iptables | grep -A1 filter | grep COMMIT | awk -F: {'print $1'}) && sed -i '$LNi# START SALT BLOCKREPLACE ZONE\n# END SALT BLOCKREPLACE ZONE' /etc/sysconfig/iptables"
+    - unless: grep "START SALT BLOCKREPLACE ZONE" /etc/sysconfig/iptables
+
 {% set count = namespace(value=0) %}
 {% for chain, hg in assigned_hostgroups.chain.items() %}
   {% for hostgroup, portgroups in assigned_hostgroups.chain[chain].hostgroups.items() %}
@@ -104,6 +109,7 @@ enable_docker_user_established:
               {% for port in ports %}
                 {% set count.value = count.value + 1 %}
 
+# NEED TO HANDLE DELETE ACTIONS STILL
 {{action}}_{{chain}}_{{hostgroup}}_{{ip}}_{{port}}_{{proto}}_{{count.value}}:
   file.accumulated:
     - filename: /etc/sysconfig/iptables
@@ -120,27 +126,27 @@ enable_docker_user_established:
   {% endfor %}
 {% endfor %}
 
-add_commit_accumulator:
+# Make the input policy send stuff that doesn't match to be logged and dropped
+iptables_drop_all_the_things_accumulator:
   file.accumulated:
     - filename: /etc/sysconfig/iptables
-    - text: "COMMIT"
+    - text: "-A LOGGING -j DROP"
     - require_in:
       - file: iptables_file
+
+
+#add_commit_accumulator:
+#  file.accumulated:
+#    - filename: /etc/sysconfig/iptables
+#    - text: "COMMIT"
+#    - require_in:
+#      - file: iptables_file
 
 iptables_file:
   file.blockreplace:
     - name: /etc/sysconfig/iptables
     - marker_start: "# START SALT BLOCKREPLACE ZONE"
     - marker_end: "# END SALT BLOCKREPLACE ZONE"
-    - append_if_not_found: True
-
-# Make the input policy send stuff that doesn't match to be logged and dropped
-iptables_drop_all_the_things:
-  iptables.append:
-    - table: filter
-    - chain: LOGGING
-    - jump: DROP
-    - save: True
 
 flush_iptables:
     iptables.flush:
