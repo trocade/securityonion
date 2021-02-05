@@ -885,11 +885,13 @@ docker_install() {
 				apt-get update >> "$setup_log" 2>&1
 				;;
 			*)
+                                if [ "${LOCALUPDATES}" == 0 ]; then
 				{
 					apt-key add "$temp_install_dir"/gpg/docker.pub;
 					add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable";
 					apt-get update;
 				} >> "$setup_log" 2>&1
+				fi
 				;;
 		esac 
 		
@@ -1682,25 +1684,26 @@ saltify() {
 				if [ "$OSVER" != 'xenial' ]; then apt-get -y install python3-mysqldb >> "$setup_log" 2>&1; else apt-get -y install python-mysqldb >> "$setup_log" 2>&1; fi
 				;;
 			'MANAGER' | 'EVAL' | 'MANAGERSEARCH' | 'STANDALONE' | 'IMPORT' | 'HELIXSENSOR')
+                                if [ "${LOCALUPDATES}" == 0 ]; then
+					# Add saltstack repo(s)
+					wget -q --inet4-only -O - https://repo.saltstack.com"$py_ver_url_path"/ubuntu/"$ubuntu_version"/amd64/archive/3002.2/SALTSTACK-GPG-KEY.pub | apt-key add - >> "$setup_log" 2>&1
+					echo "deb http://repo.saltstack.com$py_ver_url_path/ubuntu/$ubuntu_version/amd64/archive/3002.2 $OSVER main" > /etc/apt/sources.list.d/saltstack.list 2>> "$setup_log"
 
-				# Add saltstack repo(s)
-				wget -q --inet4-only -O - https://repo.saltstack.com"$py_ver_url_path"/ubuntu/"$ubuntu_version"/amd64/archive/3002.2/SALTSTACK-GPG-KEY.pub | apt-key add - >> "$setup_log" 2>&1
-				echo "deb http://repo.saltstack.com$py_ver_url_path/ubuntu/$ubuntu_version/amd64/archive/3002.2 $OSVER main" > /etc/apt/sources.list.d/saltstack.list 2>> "$setup_log"
+					# Add Docker repo
+					curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - >> "$setup_log" 2>&1
+					add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" >> "$setup_log" 2>&1
 
-				# Add Docker repo
-				curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - >> "$setup_log" 2>&1
-				add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" >> "$setup_log" 2>&1
+					# Get gpg keys
+					mkdir -p /opt/so/gpg >> "$setup_log" 2>&1
+					wget -q --inet4-only -O /opt/so/gpg/SALTSTACK-GPG-KEY.pub https://repo.saltstack.com$py_ver_url_path/ubuntu/"$ubuntu_version"/amd64/archive/3002.2/SALTSTACK-GPG-KEY.pub >> "$setup_log" 2>&1
+					wget -q --inet4-only -O /opt/so/gpg/docker.pub https://download.docker.com/linux/ubuntu/gpg >> "$setup_log" 2>&1
+					wget -q --inet4-only -O /opt/so/gpg/GPG-KEY-WAZUH https://packages.wazuh.com/key/GPG-KEY-WAZUH >> "$setup_log" 2>&1
 
-				# Get gpg keys
-				mkdir -p /opt/so/gpg >> "$setup_log" 2>&1
-				wget -q --inet4-only -O /opt/so/gpg/SALTSTACK-GPG-KEY.pub https://repo.saltstack.com$py_ver_url_path/ubuntu/"$ubuntu_version"/amd64/archive/3002.2/SALTSTACK-GPG-KEY.pub >> "$setup_log" 2>&1
-				wget -q --inet4-only -O /opt/so/gpg/docker.pub https://download.docker.com/linux/ubuntu/gpg >> "$setup_log" 2>&1
-				wget -q --inet4-only -O /opt/so/gpg/GPG-KEY-WAZUH https://packages.wazuh.com/key/GPG-KEY-WAZUH >> "$setup_log" 2>&1
-
-				# Get key and install wazuh
-				curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | apt-key add - >> "$setup_log" 2>&1
-				# Add repo
-				echo "deb https://packages.wazuh.com/3.x/apt/ stable main" > /etc/apt/sources.list.d/wazuh.list 2>> "$setup_log"
+					# Get key and install wazuh
+					curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | apt-key add - >> "$setup_log" 2>&1
+					# Add repo
+					echo "deb https://packages.wazuh.com/3.x/apt/ stable main" > /etc/apt/sources.list.d/wazuh.list 2>> "$setup_log"
+				fi
 				# Initialize the new repos
 				apt-get update >> "$setup_log" 2>&1
 				set_progress_str 6 'Installing various dependencies'
@@ -1710,15 +1713,17 @@ saltify() {
 				apt-mark hold salt-master >> "$setup_log" 2>&1
 				;;
 			*)
-				# Copy down the gpg keys and install them from the manager
-				mkdir "$temp_install_dir"/gpg >> "$setup_log" 2>&1
-				echo "scp the gpg keys and install them from the manager" >> "$setup_log" 2>&1
-				scp -v -i /root/.ssh/so.key soremote@"$MSRV":/opt/so/gpg/* "$temp_install_dir"/gpg >> "$setup_log" 2>&1
-				echo "Using apt-key add to add SALTSTACK-GPG-KEY.pub and GPG-KEY-WAZUH" >> "$setup_log" 2>&1
-				apt-key add "$temp_install_dir"/gpg/SALTSTACK-GPG-KEY.pub >> "$setup_log" 2>&1
-				apt-key add "$temp_install_dir"/gpg/GPG-KEY-WAZUH >> "$setup_log" 2>&1
-				echo "deb http://repo.saltstack.com$py_ver_url_path/ubuntu/$ubuntu_version/amd64/archive/3002.2/ $OSVER main" > /etc/apt/sources.list.d/saltstack.list 2>> "$setup_log"
-				echo "deb https://packages.wazuh.com/3.x/apt/ stable main" > /etc/apt/sources.list.d/wazuh.list 2>> "$setup_log"
+				if [ "${LOCALUPDATES}" == 0 ]; then
+					# Copy down the gpg keys and install them from the manager
+					mkdir "$temp_install_dir"/gpg >> "$setup_log" 2>&1
+					echo "scp the gpg keys and install them from the manager" >> "$setup_log" 2>&1
+					scp -v -i /root/.ssh/so.key soremote@"$MSRV":/opt/so/gpg/* "$temp_install_dir"/gpg >> "$setup_log" 2>&1
+					echo "Using apt-key add to add SALTSTACK-GPG-KEY.pub and GPG-KEY-WAZUH" >> "$setup_log" 2>&1
+					apt-key add "$temp_install_dir"/gpg/SALTSTACK-GPG-KEY.pub >> "$setup_log" 2>&1
+					apt-key add "$temp_install_dir"/gpg/GPG-KEY-WAZUH >> "$setup_log" 2>&1
+					echo "deb http://repo.saltstack.com$py_ver_url_path/ubuntu/$ubuntu_version/amd64/archive/3002.2/ $OSVER main" > /etc/apt/sources.list.d/saltstack.list 2>> "$setup_log"
+					echo "deb https://packages.wazuh.com/3.x/apt/ stable main" > /etc/apt/sources.list.d/wazuh.list 2>> "$setup_log"
+				fi
 				;;
 		esac
 		apt-get update >> "$setup_log" 2>&1

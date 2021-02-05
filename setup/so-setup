@@ -435,6 +435,9 @@ if [[ $is_distmanager || ( $is_sensor || $is_node || $is_fleet_standalone ) && !
 	if [[ $setup_type == 'network' && $MANAGERUPDATES == 1 ]]; then
 		whiptail_manager_updates_warning
 	fi
+	if [[ $setup_type == 'network' && $LOCALUPDATES == 1 ]]; then
+		whiptail_local_updates_warning
+	fi
 fi
 
 if [[ $is_distmanager ]]; then
